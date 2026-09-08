@@ -142,3 +142,8 @@ Number — $1/kuu. Kõned — ~$0.007/min. Salvestus — $0.002/min.
 Transkriptsioon — Telnyx STT hindade järgi, samuti minutite kaupa.
 Tagasihoidliku mahu juures (10 numbrit, paarsada kõnet kuus, igaüks
 3-5 minutit) — umbes $20-60/kuu, arendustööd arvestamata.
+
+
+
+## Diagramm
+![alt text](image.png)
