@@ -1,0 +1,8 @@
+.env
+node_modules/
+call_tracking.db
+call_tracking.db-journal
+call_tracking.db-wal
+call_tracking.db-shm
+.DS_Store
+Thumbs.db
