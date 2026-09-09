@@ -62,7 +62,7 @@ app.post('/webhooks/telnyx', async (req, res) => {
         if (eventType === 'call.initiated') {
             await handleCallInitiated(payload);
         } else if (eventType === 'call.answered') {
-            handleCallAnswered(payload);
+            await handleCallAnswered(payload);
         } else if (eventType === 'call.hangup') {
             handleCallHangup(payload);
         } else if (eventType === 'call.recording.saved') {
@@ -96,10 +96,15 @@ async function handleCallInitiated(payload) {
 
     await telnyx.calls.actions.answer(callControlId);
 
+    const clientState = Buffer.from(
+        JSON.stringify({leadCallControlId: callControlId})
+    ).toString('base64');
+
     const dialParams = {
         connection_id: process.env.TELNYX_CONNECTION_ID,
         to: SALES_PHONE_NUMBER,
         from: trackingNumber,
+        client_state: clientState,
     };
 
     if (RECORD_CALLS) {
@@ -116,11 +121,32 @@ async function handleCallInitiated(payload) {
     .run(callLegId || null, callControlId);
 }
 
-function handleCallAnswered(payload) {
+async function handleCallAnswered(payload) {
+  if (!payload.client_state) {
+    return;
+  }
+
+  let leadCallControlId;
+  try {
+    const decoded = JSON.parse(Buffer.from(payload.client_state, 'base64').toString('utf-8'));
+    leadCallControlId = decoded.leadCallControlId;
+  } catch (err) {
+    console.error('Failed to decode client_state:', err);
+    return;
+  }
+
+  if (!leadCallControlId) return;
+
+  await telnyx.calls.actions.bridge(payload.call_control_id, {
+    call_control_id: leadCallControlId
+  });
+
   db.prepare(`
     UPDATE calls SET status = 'answered', answered_at = datetime('now')
-    WHERE call_control_id = ? OR call_leg_id = ?
-  `).run(payload.call_control_id, payload.call_leg_id);
+    WHERE call_control_id = ?
+  `).run(leadCallControlId);
+
+  console.log(`Sales rep responded — connecting call ${leadCallControlId} with ${payload.call_control_id}`);
 }
 
 function handleCallHangup(payload) {
